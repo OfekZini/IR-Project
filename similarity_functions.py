@@ -29,10 +29,10 @@ def cosine_similarity(D,Q):
         cosine_dict[doc_id] = round(np.dot(D.loc[doc_id],Q)/(np.linalg.norm(D.loc[doc_id])*np.linalg.norm(Q)),5)
     return cosine_dict
 
-class BM25:
-    def __init__(self, index, k1= 1.5, b=0.75):
-        self.index = index
-        self.b = b
-        self.k1 = k1
-
-    def calc_idf(self):
+# class BM25:
+#     def __init__(self, index, k1= 1.5, b=0.75):
+#         self.index = index
+#         self.b = b
+#         self.k1 = k1
+#
+#     def calc_idf(self):
