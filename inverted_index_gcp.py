@@ -13,7 +13,7 @@ from google.cloud import storage
 from collections import defaultdict
 from contextlib import closing
 
-PROJECT_ID = 'YOUR-PROJECT-ID-HERE'
+PROJECT_ID = 'ir-hw3-444616'
 def get_bucket(bucket_name):
     return storage.Client(PROJECT_ID).bucket(bucket_name)
 
@@ -21,6 +21,7 @@ def _open(path, mode, bucket=None):
     if bucket is None:
         return open(path, mode)
     return bucket.blob(path).open(mode)
+
 
 # Let's start with a small block size of 30 bytes just to test things out. 
 BLOCK_SIZE = 1999998

@@ -27,7 +27,7 @@ def query_tfidf(query, index):
 
     return query_tfidf
 
-def cosine_similarity(query_tfidf, doc_tfidf):
+def calc_cosine(query_tfidf, doc_tfidf):
     """
     Calculates the cosine similarity between a query and a document.
     """
@@ -48,7 +48,7 @@ def cosine_similarity(query_tfidf, doc_tfidf):
     return dot_product / (math.sqrt(query_magnitude) * math.sqrt(doc_magnitude))
 
 
-def get_candidates_with_cosine(query, candidates, index, doc_length_dict):
+def cosine_similarity(query, candidates, index, doc_length_dict):
     """
     Returns a dictionary of candidates with cosine similarity scores.
 
@@ -79,7 +79,7 @@ def get_candidates_with_cosine(query, candidates, index, doc_length_dict):
             tfidf_value = tf * idf  # TF-IDF value
             doc_tfidf[term] = tfidf_value
 
-            cosine = cosine_similarity(query_tfidf_scores, doc_tfidf)
+            cosine = calc_cosine(query_tfidf_scores, doc_tfidf)
             results[doc_id] = cosine
 
     return results
@@ -154,3 +154,30 @@ def tf_count_score(candidates):
         for doc_id, tf in postings:
             doc_tf_scores[doc_id] = doc_tf_scores.get(doc_id, 0) + tf
     return doc_tf_scores
+
+
+def get_candidates(tokenized_query, index):
+  """
+  Retrieves a dictionary mapping query tokens to their respective posting lists.
+
+  Args:
+    tokenized_query: A list of tokens representing the query.
+    index: The inverted index object.
+
+  Returns:
+    A dictionary where keys are query tokens and values are their posting lists.
+  """
+
+  candidates_dict = {}  # Initialize the dictionary to store results
+  words, pls = zip(*index.posting_lists_iter())  # Unpack terms and posting lists
+
+  for token in tokenized_query:
+    if token in index.df:  # Check if the token exists in the index
+      try:
+        term_index = words.index(token)  # Get the token's index in the 'words' list
+        posting_list = pls[term_index]  # Retrieve the corresponding posting list
+        candidates_dict[token] = posting_list  # Store the posting list in the dictionary
+      except ValueError:
+        pass  # Ignore tokens not found in the index
+
+  return candidates_dict  # Return the dictionary
