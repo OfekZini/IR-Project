@@ -103,5 +103,7 @@ class BackendClass:
         self.page_views = {id: view / views_max for id, view in page_view.items()}
 
     def search(self, query):
-        
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query)
+
 

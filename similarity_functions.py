@@ -1,6 +1,26 @@
 import math
 import numpy as np
 import pandas as pd
+from nltk import PorterStemmer
+from nltk.corpus import stopwords
+import re
+
+english_stopwords = frozenset(stopwords.words('english'))
+corpus_stopwords = ['category', 'references', 'also”', 'links', 'extrenal',
+                 'first', 'see', 'new', 'two', 'list', 'may', 'one', 'district',
+                 'including', 'became', 'however', 'com', 'many', 'began',
+                 'make', 'made', 'part', 'would', 'people', 'second', 'also',
+                 'following', 'history', 'thumb', 'external']
+
+all_stopwords = english_stopwords.union(corpus_stopwords)
+RE_WORD = re.compile(r"""[\#\@\w](['\-]?\w){2,24}""", re.UNICODE)
+
+
+def tokenize(text):
+  stemmer = PorterStemmer()
+  tokens = [token.group() for token in RE_WORD.finditer(text.lower())]
+  stemmed = [stemmer.stem(token) for token in tokens if token not in all_stopwords]
+  return stemmed
 
 
 def query_tfidf(query, index):
@@ -83,6 +103,7 @@ def cosine_similarity(query, candidates, index, doc_length_dict):
             results[doc_id] = cosine
 
     return results
+
 
 def BM25_score(candidates, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, b=0.75):
     """
