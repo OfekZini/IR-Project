@@ -103,7 +103,31 @@ class BackendClass:
         self.page_views = {id: view / views_max for id, view in page_view.items()}
 
     def search(self, query):
+        # tokenize the query and create candidates dictionaries for each index
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query)
+        text_candidates = get_candidates(tokenized_query, self.text_index)
+        title_candidates = get_candidates(tokenized_query, self.title_index)
+        anchor_candidates = get_candidates(tokenized_query, self.anchor_index)
 
+        # collect and merge scores for query in text index
+        bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
+                                 self.avg_doc_len, k1=1.2, b=0.75)
+        cos_sim_text = cosine_similarity(tokenized_query, text_candidates, self.text_index, self.text_doc_len_dict)
+        merged_text = merge(bm25_scores_text, cos_sim_text)
 
+        # collect and merge scores for query in title index
+        word_count_scores_title = word_count_score(title_candidates)
+        cos_sim_title = cosine_similarity(tokenized_query, title_candidates, self.title_index, self.title_doc_len_dict)
+        merged_title = merge(word_count_scores_title, cos_sim_title)
+
+        # collect and merge scores for query in anchor index
+        word_count_scores_anchor = word_count_score(anchor_candidates)
+        tf_count_scores_anchor = tf_count_score(anchor_candidates)
+        merged_anchor = merge(word_count_scores_anchor, tf_count_scores_anchor)
+
+        # combine the three indices scores
+        combined_scores = cross_merge(merged_text, merged_title, merged_anchor)
+
+        # sort the combined scores and return the top 100
+        sorted_scores = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
+        return sorted_scores[:100]

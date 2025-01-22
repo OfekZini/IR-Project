@@ -202,3 +202,54 @@ def get_candidates(tokenized_query, index):
         pass  # Ignore tokens not found in the index
 
   return candidates_dict  # Return the dictionary
+
+
+def merge(scores1, scores2, w1=0.5, w2=0.5):
+    """
+      Merges two dictionaries of scores from the same index type, applying weights to each.
+
+      Args:
+        scores1: A dictionary where keys are document IDs and values are scores.
+        scores2: A dictionary where keys are document IDs and values are scores.
+        w1: Weight for scores1 (default: 0.5).
+        w2: Weight for scores2 (default: 0.5).
+
+      Returns:
+        A dictionary where keys are document IDs and values are weighted sums of
+        corresponding scores from scores1 and scores2.
+      """
+    merged_scores = {}
+    for doc_id in scores1:
+        merged_scores[doc_id] = scores1[doc_id] * w1 + scores2[doc_id] * w2
+    return merged_scores
+
+
+def cross_merge(text_res, title_res, anchor_res, w1=0.65, w2=0.25, w3=0.1):
+    """
+      Merges three dictionaries of scores with different keys.
+
+      Args:
+        text_res: A dictionary where keys are document IDs and values are scores for text similarity functions.
+        title_res: A dictionary where keys are document IDs and values are scores for title similarity functions.
+        anchor_res: A dictionary where keys are document IDs and values are scores for anchor similarity functions.
+        w1: Weight for text_res (default: 0.65).
+        w2: Weight for title_res (default: 0.25).
+        w3: Weight for anchor_res (default: 0.1).
+
+      Returns:
+        A dictionary where keys are document IDs and values are weighted sums of
+        corresponding scores from text_res, title_res, and anchor_res.
+        If a key is missing in one of the dictionaries, its score is considered 0.
+      """
+
+    merged_scores = {}
+    all_keys = set(text_res.keys()).union(set(title_res.keys())).union(set(anchor_res.keys()))
+
+    for doc_id in all_keys:
+        text_score = text_res.get(doc_id, 0.0)  # Use 0.0 if key is not found
+        title_score = title_res.get(doc_id, 0.0)
+        anchor_score = anchor_res.get(doc_id, 0.0)
+        merged_scores[doc_id] = text_score * w1 + title_score * w2 + anchor_score * w3
+
+    return merged_scores
+
