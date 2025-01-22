@@ -128,6 +128,61 @@ class BackendClass:
         # combine the three indices scores
         combined_scores = cross_merge(merged_text, merged_title, merged_anchor)
 
-        # sort the combined scores and return the top 100
+        # sort the combined scores, transform to a list of top 100 doc_ids
         sorted_scores = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
-        return sorted_scores[:100]
+        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        res_titles = self._get_doc_titles(top_100_doc_ids)
+        return res_titles
+
+    def search_body(self, query):
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query, self.text_index)
+        bm25_scores_text = BM25_score(candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
+                                      self.avg_doc_len, k1=1.2, b=0.75)
+        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.text_doc_len_dict)
+        merged_text = merge(bm25_scores_text, cos_sim_text)
+        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        res_titles = self._get_doc_titles(top_100_doc_ids)
+        return res_titles
+
+
+    def search_title(self, query):
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query, self.anchor_index)
+        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.title_doc_len_dict)
+        word_count_scores = word_count_score(candidates)
+        merged_text = merge(word_count_scores, cos_sim_text)
+        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        res_titles = self._get_doc_titles(top_100_doc_ids)
+        return res_titles
+
+    def search_anchor(self, query):
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query, self.title_index)
+        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.text_doc_len_dict)
+        word_count_scores = word_count_score(candidates)
+        merged_text = merge(word_count_scores, cos_sim_text)
+        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        res_titles = self._get_doc_titles(top_100_doc_ids)
+        return res_titles
+
+    def get_pagerank(self, query):
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query)
+
+    def get_pageview(self, query):
+        tokenized_query = tokenize(query)
+        candidates = get_candidates(tokenized_query)
+
+
+    def _get_doc_titles(self,id_list):
+        res = []
+        for id in id_list:
+            if id % 2 == 0:
+                res.append(self.doc_id_title_even_dict.get(id))
+            else:
+                res.append(self.doc_id_title_odd_dict.get(id))
+        return res
