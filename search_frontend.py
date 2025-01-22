@@ -1,8 +1,14 @@
 from flask import Flask, request, jsonify
+from backend import BackendClass
+
 
 class MyFlaskApp(Flask):
     def run(self, host=None, port=None, debug=None, **options):
         super(MyFlaskApp, self).run(host=host, port=port, debug=debug, **options)
+
+
+
+backend = BackendClass()
 
 app = MyFlaskApp(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
@@ -30,7 +36,7 @@ def search():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-
+    res = backend.search(query)
     # END SOLUTION
     return jsonify(res)
 
