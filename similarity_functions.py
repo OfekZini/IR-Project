@@ -81,7 +81,8 @@ def cosine_similarity(query, candidates, index, doc_length_dict):
     """
     query_tfidf_scores = query_tfidf(query, index)
     N = len(index.df)
-    results = {}
+    # results = {}
+    results = Counter()
 
     for term, posting_list in candidates.items():
         for doc_id, tf in posting_list:
@@ -102,7 +103,8 @@ def cosine_similarity(query, candidates, index, doc_length_dict):
             doc_tfidf[term] = tfidf_value
 
             cosine = calc_cosine(query_tfidf_scores, doc_tfidf)
-            results[doc_id] = cosine
+            # results[doc_id] = cosine
+            results[doc_id] += cosine
 
     return results
 
@@ -156,7 +158,8 @@ def word_count_score(candidates):
               query terms found in that document.
     """
 
-    doc_term_counts = {}  # Initialize a dictionary to store term counts for each document
+    # doc_term_counts = {}  # Initialize a dictionary to store term counts for each document
+    doc_term_counts = Counter()
     for term, postings in candidates.items():
         for doc_id, _ in postings:
             doc_term_counts[doc_id] = doc_term_counts.get(doc_id, 0) + 1  # Increment the term count for the document
@@ -174,7 +177,8 @@ def tf_count_score(candidates):
     Returns:
         dict: A dictionary where keys are document IDs and values are their total tf score.
     """
-    doc_tf_scores = {}  # Initialize a regular dictionary
+    # doc_tf_scores = {}  # Initialize a regular dictionary
+    doc_tf_scores = Counter()
     for term, postings in candidates.items():
         for doc_id, tf in postings:
             doc_tf_scores[doc_id] = doc_tf_scores.get(doc_id, 0) + tf

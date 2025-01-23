@@ -193,11 +193,10 @@ class BackendClass:
 
     def test_search(self,query):
         tokenized_query = tokenize(query)
-        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
-        bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
-                                      self.avg_doc_len, k1=1.5, b=0.5)
+        title_candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
+        word_count_scores_title = word_count_score(title_candidates)
 
-        scored = bm25_scores_text.most_common(100)
+        scored = word_count_scores_title.most_common(100)
         res = [(str(id),"res") for id , score in scored]
         # sorted_scores = sorted(bm25_scores_text.items(), key=lambda x: x[1], reverse=True)
         # top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
