@@ -1,3 +1,4 @@
+from collections import Counter
 import gzip
 import re
 import math
@@ -109,7 +110,7 @@ class BackendClass:
         tokenized_query = tokenize(query)
         text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
         title_candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
-        anchor_candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
+        # anchor_candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
 
         # collect and merge scores for query in text index
         bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
@@ -122,19 +123,20 @@ class BackendClass:
         cos_sim_title = cosine_similarity(tokenized_query, title_candidates, self.title_index, self.title_doc_len_dict)
         merged_title = merge(word_count_scores_title, cos_sim_title)
 
-        # collect and merge scores for query in anchor index
-        word_count_scores_anchor = word_count_score(anchor_candidates)
-        tf_count_scores_anchor = tf_count_score(anchor_candidates)
-        merged_anchor = merge(word_count_scores_anchor, tf_count_scores_anchor)
+        # # collect and merge scores for query in anchor index
+        # word_count_scores_anchor = word_count_score(anchor_candidates)
+        # tf_count_scores_anchor = tf_count_score(anchor_candidates)
+        # merged_anchor = merge(word_count_scores_anchor, tf_count_scores_anchor)
 
+        merged_anchor = {}
         # combine the three indices scores
         combined_scores = cross_merge(merged_text, merged_title, merged_anchor)
 
         # sort the combined scores, transform to a list of top 100 doc_ids
         sorted_scores = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
-        res_titles = self._get_doc_titles(top_100_doc_ids)
-        return res_titles
+        top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        # return res_titles
+        return top_100_doc_ids
 
     def search_body(self, query):
         tokenized_query = tokenize(query)
@@ -193,10 +195,12 @@ class BackendClass:
         tokenized_query = tokenize(query)
         text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
         bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
-                                      self.avg_doc_len, k1=1.2, b=0.75)
+                                      self.avg_doc_len, k1=1.5, b=0.5)
 
-        sorted_scores = sorted(bm25_scores_text.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        scored = bm25_scores_text.most_common(100)
+        res = [(str(id),"res") for id , score in scored]
+        # sorted_scores = sorted(bm25_scores_text.items(), key=lambda x: x[1], reverse=True)
+        # top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
         # res_titles = self._get_doc_titles(top_100_doc_ids)
         # return res_titles
-        return top_100_doc_ids
+        return res

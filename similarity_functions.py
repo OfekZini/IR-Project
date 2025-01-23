@@ -1,3 +1,4 @@
+from collections import Counter
 import math
 import numpy as np
 import pandas as pd
@@ -122,8 +123,9 @@ def BM25_score(candidates, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, 
     Returns:
         dict: A dictionary where keys are document IDs and values are their BM25 scores.
     """
-    bm25_scores = {}  # Initialize an empty dictionary to store scores
+    # bm25_scores = {}  # Initialize an empty dictionary to store scores
 
+    bm25_scores = Counter()
     for term in candidates.keys():
         # Calculate IDF
         df = index.df[term]
@@ -133,7 +135,8 @@ def BM25_score(candidates, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, 
         for doc_id, tf in candidates[term]:
             try:
                 norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_lengths[doc_id] / avg_doc_length)))
-                bm25_scores[doc_id] = bm25_scores.get(doc_id, 0) + idf * norm  # Accumulate scores
+                # bm25_scores[doc_id] = bm25_scores.get(doc_id, 0) + idf * norm  # Accumulate scores
+                bm25_scores[doc_id] += idf * norm  # for counter
             except:
                 pass
 
@@ -237,15 +240,10 @@ def cross_merge(text_res, title_res, anchor_res, w1=0.65, w2=0.25, w3=0.1):
         corresponding scores from text_res, title_res, and anchor_res.
         If a key is missing in one of the dictionaries, its score is considered 0.
       """
-
-    merged_scores = {}
-    all_keys = set(text_res.keys()).union(set(title_res.keys())).union(set(anchor_res.keys()))
-
-    for doc_id in all_keys:
-        text_score = text_res.get(doc_id, 0.0)  # Use 0.0 if key is not found
-        title_score = title_res.get(doc_id, 0.0)
-        anchor_score = anchor_res.get(doc_id, 0.0)
-        merged_scores[doc_id] = text_score * w1 + title_score * w2 + anchor_score * w3
-
-    return merged_scores
+    return {
+        doc_id: text_res.get(doc_id, 0.0) * w1 +
+                title_res.get(doc_id, 0.0) * w2 +
+                anchor_res.get(doc_id, 0.0) * w3
+        for doc_id in set(text_res) | set(title_res) | set(anchor_res)
+    }
 
