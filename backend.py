@@ -52,10 +52,11 @@ class BackendClass:
             self.page_views (dict): Dictionary mapping document IDs to their normalized PageView counts.
         """
         # indices paths
+        print("init backend class")
         index_name = 'index'
-        text_idx_path = 'text_stemmed'
-        title_idx_path = 'title_stemmed'
-        anchor_idx_path = 'anchor_stemmed'
+        self.text_idx_path = 'text_stemmed'
+        self.title_idx_path = 'title_stemmed'
+        self.anchor_idx_path = 'anchor_stemmed'
 
         # documents length dictionaries paths
         text_doc_len_path = 'text_stemmed/text_doc_lengths.pickle'
@@ -63,9 +64,9 @@ class BackendClass:
         # anchor_doc_len_path = 'anchor_stemmed/anchor_doc_lengths.pickle'
 
         # indices data members
-        self.text_index = InvertedIndex.read_index(text_idx_path, index_name, bucket_name)
-        self.title_index = InvertedIndex.read_index(title_idx_path, index_name, bucket_name)
-        self.anchor_index = InvertedIndex.read_index(anchor_idx_path, index_name, bucket_name)
+        self.text_index = InvertedIndex.read_index(self.text_idx_path, index_name, bucket_name)
+        self.title_index = InvertedIndex.read_index(self.title_idx_path, index_name, bucket_name)
+        self.anchor_index = InvertedIndex.read_index(self.anchor_idx_path, index_name, bucket_name)
 
         # Document length dict data members
         text_doc_len_bytes = download_blob_as_bytes(bucket, text_doc_len_path)
@@ -101,13 +102,14 @@ class BackendClass:
         page_view = pickle.loads(pageViews_bytes)
         views_max = max(page_view.values())
         self.page_views = {id: view / views_max for id, view in page_view.items()}
+        print("backend started")
 
     def search(self, query):
         # tokenize the query and create candidates dictionaries for each index
         tokenized_query = tokenize(query)
-        text_candidates = get_candidates(tokenized_query, self.text_index)
-        title_candidates = get_candidates(tokenized_query, self.title_index)
-        anchor_candidates = get_candidates(tokenized_query, self.anchor_index)
+        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
+        title_candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
+        anchor_candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
 
         # collect and merge scores for query in text index
         bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
@@ -136,7 +138,7 @@ class BackendClass:
 
     def search_body(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.text_index)
+        candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
         bm25_scores_text = BM25_score(candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
                                       self.avg_doc_len, k1=1.2, b=0.75)
         cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.text_doc_len_dict)
@@ -149,7 +151,7 @@ class BackendClass:
 
     def search_title(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.anchor_index)
+        candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
         cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.title_doc_len_dict)
         word_count_scores = word_count_score(candidates)
         merged_text = merge(word_count_scores, cos_sim_text)
@@ -160,10 +162,10 @@ class BackendClass:
 
     def search_anchor(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.title_index)
-        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.text_doc_len_dict)
+        candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
         word_count_scores = word_count_score(candidates)
-        merged_text = merge(word_count_scores, cos_sim_text)
+        tf_count_scores= tf_count_score(candidates)
+        merged_text = merge(word_count_scores, tf_count_scores)
         sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
         top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
         res_titles = self._get_doc_titles(top_100_doc_ids)
@@ -171,11 +173,11 @@ class BackendClass:
 
     def get_pagerank(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query)
+        candidates = get_candidates(tokenized_query,self.title_index, bucket_name)
 
     def get_pageview(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query)
+        candidates = get_candidates(tokenized_query,self.title_index, bucket_name)
 
 
     def _get_doc_titles(self,id_list):
@@ -186,3 +188,15 @@ class BackendClass:
             else:
                 res.append(self.doc_id_title_odd_dict.get(id))
         return res
+
+    def test_search(self,query):
+        tokenized_query = tokenize(query)
+        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
+        bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
+                                      self.avg_doc_len, k1=1.2, b=0.75)
+
+        sorted_scores = sorted(bm25_scores_text.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
+        # res_titles = self._get_doc_titles(top_100_doc_ids)
+        # return res_titles
+        return top_100_doc_ids

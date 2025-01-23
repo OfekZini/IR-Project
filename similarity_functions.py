@@ -4,6 +4,7 @@ import pandas as pd
 from nltk import PorterStemmer
 from nltk.corpus import stopwords
 import re
+from inverted_index_gcp import *
 
 english_stopwords = frozenset(stopwords.words('english'))
 corpus_stopwords = ['category', 'references', 'also”', 'links', 'extrenal',
@@ -17,10 +18,10 @@ RE_WORD = re.compile(r"""[\#\@\w](['\-]?\w){2,24}""", re.UNICODE)
 
 
 def tokenize(text):
-  stemmer = PorterStemmer()
-  tokens = [token.group() for token in RE_WORD.finditer(text.lower())]
-  stemmed = [stemmer.stem(token) for token in tokens if token not in all_stopwords]
-  return stemmed
+    stemmer = PorterStemmer()
+    tokens = [token.group() for token in RE_WORD.finditer(text.lower())]
+    stemmed = [stemmer.stem(token) for token in tokens if token not in all_stopwords]
+    return stemmed
 
 
 def query_tfidf(query, index):
@@ -177,31 +178,26 @@ def tf_count_score(candidates):
     return doc_tf_scores
 
 
-def get_candidates(tokenized_query, index):
-  """
-  Retrieves a dictionary mapping query tokens to their respective posting lists.
+def get_candidates(tokenized_query, index, bucket_name):
+    """
+    Retrieves a dictionary mapping query tokens to their respective posting lists.
 
-  Args:
+    Args:
     tokenized_query: A list of tokens representing the query.
     index: The inverted index object.
 
-  Returns:
+    Returns:
     A dictionary where keys are query tokens and values are their posting lists.
-  """
+    """
+    candidates_dict = {}  # Initialize the dictionary to store results
 
-  candidates_dict = {}  # Initialize the dictionary to store results
-  words, pls = zip(*index.posting_lists_iter())  # Unpack terms and posting lists
-
-  for token in tokenized_query:
-    if token in index.df:  # Check if the token exists in the index
-      try:
-        term_index = words.index(token)  # Get the token's index in the 'words' list
-        posting_list = pls[term_index]  # Retrieve the corresponding posting list
-        candidates_dict[token] = posting_list  # Store the posting list in the dictionary
-      except ValueError:
-        pass  # Ignore tokens not found in the index
-
-  return candidates_dict  # Return the dictionary
+    for token in tokenized_query:
+      pl = index.read_a_posting_list(".",token, bucket_name)
+      if pl == []:
+        continue
+      else:
+        candidates_dict[token] = pl
+    return candidates_dict  # Return the dictionary
 
 
 def merge(scores1, scores2, w1=0.5, w2=0.5):

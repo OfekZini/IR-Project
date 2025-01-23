@@ -8,8 +8,8 @@ class MyFlaskApp(Flask):
 
 
 
-backend = BackendClass()
 
+backend = BackendClass()
 app = MyFlaskApp(__name__)
 app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
@@ -36,7 +36,10 @@ def search():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-    res = backend.search(query)
+    # print(f"got this query: {query}")
+    # res = ["hello", "world"]
+    # res = backend.search(query)
+    res = backend.test_search(query)
     # END SOLUTION
     return jsonify(res)
 
