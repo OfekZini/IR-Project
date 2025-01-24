@@ -109,7 +109,7 @@ def cosine_similarity(query, candidates, index, doc_length_dict):
     return results
 
 
-def BM25_score(candidates, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, b=0.75):
+def BM25_score(tokenized_query, bucket_name, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, b=0.75):
     """
     Calculates BM25 scores for documents based on a given query and an inverted index.
 
@@ -125,22 +125,39 @@ def BM25_score(candidates, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, 
     Returns:
         dict: A dictionary where keys are document IDs and values are their BM25 scores.
     """
-    # bm25_scores = {}  # Initialize an empty dictionary to store scores
+    bm25_scores = Counter()  # Initialize a dictionary to store BM25 scores
+    candidates_dict = {}  # Initialize a dictionary to store candidates of retrieval
 
-    bm25_scores = Counter()
-    for term in candidates.keys():
-        # Calculate IDF
-        df = index.df[term]
-        idf = math.log(doc_num / df, 10)
+    for token in tokenized_query:
+        pl = index.read_a_posting_list(".", token, bucket_name)
+        if pl == []:
+            continue
+        else:
+            candidates_dict[token] = pl  # Store the posting list in the dictionary
+            df = index.df[token]  # Document frequency
+            idf = math.log(doc_num / df, 10)  # Inverse document frequency
 
-        # Calculate BM25 score for each document in the term's posting list
-        for doc_id, tf in candidates[term]:
-            try:
-                norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_lengths[doc_id] / avg_doc_length)))
-                # bm25_scores[doc_id] = bm25_scores.get(doc_id, 0) + idf * norm  # Accumulate scores
-                bm25_scores[doc_id] += idf * norm  # for counter
-            except:
-                pass
+            for doc_id, tf in candidates_dict[token]:  # Iterate through the posting list
+                try:
+                    norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_lengths[doc_id] / avg_doc_length)))
+                    bm25_scores[doc_id] += idf * norm  # Accumulate scores
+                except:
+                    pass
+
+    # bm25_scores = Counter()
+    # for term in candidates.keys():
+    #     # Calculate IDF
+    #     df = index.df[term]
+    #     idf = math.log(doc_num / df, 10)
+    #
+    #     # Calculate BM25 score for each document in the term's posting list
+    #     for doc_id, tf in candidates[term]:
+    #         try:
+    #             norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * (doc_lengths[doc_id] / avg_doc_length)))
+    #             # bm25_scores[doc_id] = bm25_scores.get(doc_id, 0) + idf * norm  # Accumulate scores
+    #             bm25_scores[doc_id] += idf * norm  # for counter
+    #         except:
+    #             pass
 
     return bm25_scores
 
