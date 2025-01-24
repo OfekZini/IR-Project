@@ -68,12 +68,14 @@ class BackendClass:
         self.text_index = InvertedIndex.read_index(self.text_idx_path, index_name, bucket_name)
         self.title_index = InvertedIndex.read_index(self.title_idx_path, index_name, bucket_name)
         self.anchor_index = InvertedIndex.read_index(self.anchor_idx_path, index_name, bucket_name)
+        print("got indexes")
 
         # Document length dict data members
         text_doc_len_bytes = download_blob_as_bytes(bucket, text_doc_len_path)
         self.text_doc_len_dict = pickle.loads(text_doc_len_bytes)
         title_doc_len_bytes = download_blob_as_bytes(bucket, title_doc_len_path)
         self.title_doc_len_dict = pickle.loads(title_doc_len_bytes)
+        print("got dicts")
         # anchor_doc_len_bytes = download_blob_as_bytes(bucket, anchor_doc_len_path)
         # self.anchor_doc_len_dict = pickle.loads(anchor_doc_len_bytes)
 
@@ -88,6 +90,7 @@ class BackendClass:
         doc_id_title_odd_bytes = download_blob_as_bytes(bucket, doc_id_title_odd_path)
         self.doc_id_title_even_dict = pickle.loads(doc_id_title_even_bytes)
         self.doc_id_title_odd_dict = pickle.loads(doc_id_title_odd_bytes)
+        print("got title dicts")
 
         # PageRank data member
         pageRank_path = 'pr/part-00000-65f8552b-1b0d-4846-8d4e-74cf90eec0b7-c000.csv.gz' # a pyspark csv
@@ -96,6 +99,7 @@ class BackendClass:
             page_ranks = pd.read_csv(f, header=None, index_col=0).squeeze("columns").to_dict()
         ranks_max = max(page_ranks.values())
         self.page_rank = {id: rank / ranks_max for id, rank in page_ranks.items()}
+        print("got page rank")
 
         # PageView data member
         pageViews_path = 'pv/pageview.pkl' # a pickle to a dictionary
@@ -108,13 +112,13 @@ class BackendClass:
     def search(self, query):
         # tokenize the query and create candidates dictionaries for each index
         tokenized_query = tokenize(query)
-        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
-        title_candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
+        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name) #maybe make multithreaded
+        title_candidates = get_candidates(tokenized_query, self.title_index, bucket_name) #maybe make multithreaded
         # anchor_candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
 
         # collect and merge scores for query in text index
         bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
-                                 self.avg_doc_len, k1=1.2, b=0.75)
+                                 self.avg_doc_len, k1=1.2, b=0.5)
         cos_sim_text = cosine_similarity(tokenized_query, text_candidates, self.text_index, self.text_doc_len_dict)
         merged_text = merge(bm25_scores_text, cos_sim_text)
 
@@ -193,14 +197,16 @@ class BackendClass:
 
     def test_search(self,query):
         tokenized_query = tokenize(query)
-        text_candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
-        bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
-                                      self.avg_doc_len, k1=1.5, b=0.5)
+        text_candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
+        # bm25_scores_text = BM25_score(text_candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
+        #                               self.avg_doc_len, k1=1.5, b=0.5)
+        tf_word_count_scores = word_count_score(text_candidates)
 
-        scored = bm25_scores_text.most_common(100)
-        res = [(str(id),"res") for id , score in scored]
-        # sorted_scores = sorted(bm25_scores_text.items(), key=lambda x: x[1], reverse=True)
-        # top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        # scored = bm25_scores_text.most_common(100)
+        # res = [(str(id),"res") for id , score in scored]
+        sorted_scores = sorted(tf_word_count_scores.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
         # res_titles = self._get_doc_titles(top_100_doc_ids)
         # return res_titles
-        return res
+        # return res
+        return top_100_doc_ids

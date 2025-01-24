@@ -2,11 +2,14 @@ from collections import Counter
 import math
 import numpy as np
 import pandas as pd
+import nltk
 from nltk import PorterStemmer
 from nltk.corpus import stopwords
 import re
 from inverted_index_gcp import *
 
+
+nltk.download('stopwords')
 english_stopwords = frozenset(stopwords.words('english'))
 corpus_stopwords = ['category', 'references', 'also”', 'links', 'extrenal',
                  'first', 'see', 'new', 'two', 'list', 'may', 'one', 'district',
@@ -81,7 +84,7 @@ def cosine_similarity(query, candidates, index, doc_length_dict):
     """
     query_tfidf_scores = query_tfidf(query, index)
     N = len(index.df)
-    results = {}
+    results = Counter()
 
     for term, posting_list in candidates.items():
         for doc_id, tf in posting_list:
@@ -156,10 +159,10 @@ def word_count_score(candidates):
               query terms found in that document.
     """
 
-    doc_term_counts = {}  # Initialize a dictionary to store term counts for each document
+    doc_term_counts = Counter()  # Initialize a dictionary to store term counts for each document
     for term, postings in candidates.items():
         for doc_id, _ in postings:
-            doc_term_counts[doc_id] = doc_term_counts.get(doc_id, 0) + 1  # Increment the term count for the document
+            doc_term_counts[doc_id] += 1  # Increment the term count for the document
     return doc_term_counts
 
 
