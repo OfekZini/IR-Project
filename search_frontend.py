@@ -36,10 +36,8 @@ def search():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-    # print(f"got this query: {query}")
-    # res = ["hello", "world"]
-    # res = backend.search(query)
-    res = backend.test_search(query)
+    res = backend.search(query)
+    # res = backend.test_search(query)
     # END SOLUTION
     return jsonify(res)
 
