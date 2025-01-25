@@ -46,8 +46,7 @@ class BackendClass:
             self.title_doc_len_dict (dict): Dictionary mapping document IDs to their lengths (in terms of words) for titles.
             self.anchor_doc_len_dict (dict): Dictionary mapping document IDs to their lengths (in terms of words) for anchor text.
             self.corpus_size (int): Total number of documents in the corpus.
-            self.text_avg_doc_len (float): Average document length (in terms of words) for text content.
-            self.title_avg_doc_len (float): Average document length (in terms of words) for titles.
+            self.avg_doc_len (float): Average document length (in terms of words) for text content.
             self.doc_id_title_even_dict (dict): Dictionary mapping even document IDs to their corresponding titles.
             self.doc_id_title_odd_dict (dict): Dictionary mapping odd document IDs to their corresponding titles.
             self.page_rank (dict): Dictionary mapping document IDs to their normalized PageRank scores.
@@ -80,9 +79,7 @@ class BackendClass:
 
         # corpus size and average doc length data members
         self.corpus_size = 6348910  # from the gcp ipynb notebook
-        self.text_avg_doc_len = builtins.sum(self.text_doc_len_dict.values()) / self.corpus_size
-        self.title_avg_doc_len = builtins.sum(self.title_doc_len_dict.values()) / self.corpus_size
-        # self.anchor_avg_doc_len = builtins.sum(self.anchor_doc_len_dict.values()) / self.corpus_size
+        self.avg_doc_len = builtins.sum(self.text_doc_len_dict.values()) / self.corpus_size
 
         # doc_id - title dict data member
         doc_id_title_even_path = 'id_title/even_id_title_dict.pkl'
@@ -129,38 +126,25 @@ class BackendClass:
         title_max_score = title_word_count_scores_top_500[0][1]
         title_word_count_scores_top_500 = [(pair[0], pair[1]/title_max_score) for pair in title_word_count_scores_top_500]
 
-        # collect and merge scores for query in anchor index using word count
-        word_count_scores_anchor = word_count_score(tokenized_query, self.anchor_index, bucket_name)
-        anchor_word_count_scores_top_500 = word_count_scores_anchor.most_common(500)
+        # collect and merge scores for query in title index
+        word_count_scores_title = word_count_score(title_candidates)
+        cos_sim_title = cosine_similarity(tokenized_query, title_candidates, self.title_index, self.title_doc_len_dict)
+        merged_title = merge(word_count_scores_title, cos_sim_title)
 
-        # normalize anchor scores
-        anchor_max_score = anchor_word_count_scores_top_500[0][1]
-        anchor_word_count_scores_top_500 = [(pair[0], pair[1]/anchor_max_score) for pair in anchor_word_count_scores_top_500]
+        # # collect and merge scores for query in anchor index
+        # word_count_scores_anchor = word_count_score(anchor_candidates)
+        # tf_count_scores_anchor = tf_count_score(anchor_candidates)
+        # merged_anchor = merge(word_count_scores_anchor, tf_count_scores_anchor)
 
-        # Create a dict for quick lookup
-        text_bm25_dict = dict(text_bm25_scores_top_500)
-        title_word_count_dict = dict(title_word_count_scores_top_500)
-        anchor_word_count_dict = dict(anchor_word_count_scores_top_500)
-
-        # combine the 500 most common doc_ids from the three indices scores with the page rank and page views
-        text_weight = 0.65
-        title_weight = 0.25
-        anchor_weight = 0.1
-        pr_weight = 1
-        pv_weight = 1
-        weighted_scores = [
-            (doc_id,
-             text_bm25_dict.get(doc_id, 0.0) * text_weight +
-             title_word_count_dict.get(doc_id, 0.0) * title_weight +
-             anchor_word_count_dict.get(doc_id, 0.0) * anchor_weight +
-             self.page_rank.get(doc_id, 0.0) * pr_weight +
-             self.page_views.get(doc_id, 0.0) * pv_weight)
-            for doc_id in set(text_bm25_dict) | set(title_word_count_dict) | set(anchor_word_count_dict)
-        ]
+        merged_anchor = {}
+        # combine the three indices scores
+        combined_scores = cross_merge(merged_text, merged_title, merged_anchor)
 
         # sort the combined scores, transform to a list of top 100 doc_ids
-        sorted_scores = sorted(weighted_scores, key=lambda x: x[1], reverse=True)
-        return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        sorted_scores = sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)
+        top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        # return res_titles
+        return top_100_doc_ids
 
     def search_body(self, query):
         tokenized_query = tokenize(query)
