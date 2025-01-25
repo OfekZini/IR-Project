@@ -117,13 +117,30 @@ class BackendClass:
                                         self.text_doc_len_dict, self.text_avg_doc_len, k1=1.2, b=0.5)
         text_bm25_scores_top_500 = bm25_scores_text.most_common(500)
 
+        # normalize text scores
+        text_max_score = text_bm25_scores_top_500[0][1]
+        text_bm25_scores_top_500 = [(pair[0], pair[1]/text_max_score) for pair in text_bm25_scores_top_500]
+
         # collect scores for query in title index using binary word count
         word_count_scores_title = word_count_score(tokenized_query, self.title_index, bucket_name)
         title_word_count_scores_top_500 = word_count_scores_title.most_common(500)
 
+        # normalize title scores
+        title_max_score = title_word_count_scores_top_500[0][1]
+        title_word_count_scores_top_500 = [(pair[0], pair[1]/title_max_score) for pair in title_word_count_scores_top_500]
+
         # collect and merge scores for query in anchor index using word count
         word_count_scores_anchor = word_count_score(tokenized_query, self.anchor_index, bucket_name)
         anchor_word_count_scores_top_500 = word_count_scores_anchor.most_common(500)
+
+        # normalize anchor scores
+        anchor_max_score = anchor_word_count_scores_top_500[0][1]
+        anchor_word_count_scores_top_500 = [(pair[0], pair[1]/anchor_max_score) for pair in anchor_word_count_scores_top_500]
+
+        # Create a dict for quick lookup
+        text_bm25_dict = dict(text_bm25_scores_top_500)
+        title_word_count_dict = dict(title_word_count_scores_top_500)
+        anchor_word_count_dict = dict(anchor_word_count_scores_top_500)
 
         # combine the 500 most common doc_ids from the three indices scores with the page rank and page views
         text_weight = 0.65
@@ -131,21 +148,19 @@ class BackendClass:
         anchor_weight = 0.1
         pr_weight = 1
         pv_weight = 1
-        weighted_scores = {
-            doc_id: dict(text_bm25_scores_top_500).get(doc_id, 0.0) * text_weight +
-                    dict(title_word_count_scores_top_500).get(doc_id, 0.0) * title_weight +
-                    dict(anchor_word_count_scores_top_500).get(doc_id, 0.0) * anchor_weight +
-                    self.page_rank.get(doc_id, 0.0) * pr_weight +
-                    self.page_views.get(doc_id, 0.0) * pv_weight
-            for doc_id in set(dict(text_bm25_scores_top_500)) | set(dict(title_word_count_scores_top_500)) | set(
-                dict(anchor_word_count_scores_top_500))
-        }
+        weighted_scores = [
+            (doc_id,
+             text_bm25_dict.get(doc_id, 0.0) * text_weight +
+             title_word_count_dict.get(doc_id, 0.0) * title_weight +
+             anchor_word_count_dict.get(doc_id, 0.0) * anchor_weight +
+             self.page_rank.get(doc_id, 0.0) * pr_weight +
+             self.page_views.get(doc_id, 0.0) * pv_weight)
+            for doc_id in set(text_bm25_dict) | set(title_word_count_dict) | set(anchor_word_count_dict)
+        ]
 
         # sort the combined scores, transform to a list of top 100 doc_ids
-        sorted_scores = sorted(weighted_scores.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
-
-        return top_100_doc_ids
+        sorted_scores = sorted(weighted_scores, key=lambda x: x[1], reverse=True)
+        return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
 
     def search_body(self, query):
         tokenized_query = tokenize(query)
