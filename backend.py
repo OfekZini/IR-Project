@@ -132,12 +132,13 @@ class BackendClass:
         pr_weight = 1
         pv_weight = 1
         weighted_scores = {
-            doc_id: text_bm25_scores_top_500.get(doc_id, 0.0) * text_weight +
-            title_word_count_scores_top_500.get(doc_id, 0.0) * title_weight +
-            anchor_word_count_scores_top_500.get(doc_id, 0.0) * anchor_weight +
-            self.page_rank.get(doc_id, 0.0) * pr_weight +
-            self.page_views.get(doc_id, 0.0) * pv_weight
-            for doc_id in set(text_bm25_scores_top_500) | set(title_word_count_scores_top_500) | set(anchor_word_count_scores_top_500)
+            doc_id: dict(text_bm25_scores_top_500).get(doc_id, 0.0) * text_weight +
+                    dict(title_word_count_scores_top_500).get(doc_id, 0.0) * title_weight +
+                    dict(anchor_word_count_scores_top_500).get(doc_id, 0.0) * anchor_weight +
+                    self.page_rank.get(doc_id, 0.0) * pr_weight +
+                    self.page_views.get(doc_id, 0.0) * pv_weight
+            for doc_id in set(dict(text_bm25_scores_top_500)) | set(dict(title_word_count_scores_top_500)) | set(
+                dict(anchor_word_count_scores_top_500))
         }
 
         # sort the combined scores, transform to a list of top 100 doc_ids
