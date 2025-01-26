@@ -72,7 +72,7 @@ def calc_cosine(query_tfidf, doc_tfidf):
     return dot_product / (math.sqrt(query_magnitude) * math.sqrt(doc_magnitude))
 
 
-def cosine_similarity(tokenized_query, bucket_name, index, doc_length_dict):
+def cosine_similarity(tokenized_query, index, bucket_name):
     """
     Returns a dictionary of candidates with cosine similarity scores.
 

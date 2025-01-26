@@ -122,23 +122,26 @@ class BackendClass:
         # collect scores for query in text index using bm25
         bm25_scores_text = BM25_score(tokenized_query, bucket_name, self.text_index, self.corpus_size,
                                         self.text_doc_len_dict, self.text_avg_doc_len, k1=1.2, b=0.5)
-        text_bm25_scores_top_500 = bm25_scores_text.most_common(500)
+        text_bm25_scores_top_500 = bm25_scores_text.most_common(200)
 
         # normalize text scores
         text_max_score = text_bm25_scores_top_500[0][1]
         text_bm25_scores_top_500 = [(pair[0], pair[1]/text_max_score) for pair in text_bm25_scores_top_500]
 
         # collect scores for query in title index using binary word count
-        word_count_scores_title = word_count_score(tokenized_query, self.title_index, bucket_name)
-        title_word_count_scores_top_500 = word_count_scores_title.most_common(500)
+        # word_count_scores_title = word_count_score(tokenized_query, self.title_index, bucket_name)
+        word_count_scores_title = BM25_score(tokenized_query,  bucket_name, self.title_index, self.corpus_size, self.title_doc_len_dict,
+                                             self.title_avg_doc_len, k1=1.2, b=0.5)
+        title_word_count_scores_top_500 = word_count_scores_title.most_common(200)
 
         # normalize title scores
         title_max_score = title_word_count_scores_top_500[0][1]
         title_word_count_scores_top_500 = [(pair[0], pair[1]/title_max_score) for pair in title_word_count_scores_top_500]
 
         # collect and merge scores for query in anchor index using word count
-        word_count_scores_anchor = word_count_score(tokenized_query, self.anchor_index, bucket_name)
-        anchor_word_count_scores_top_500 = word_count_scores_anchor.most_common(500)
+        # word_count_scores_anchor = word_count_score(tokenized_query, self.anchor_index, bucket_name)
+        word_count_scores_anchor = cosine_similarity(tokenized_query, self.anchor_index, bucket_name)
+        anchor_word_count_scores_top_500 = word_count_scores_anchor.most_common(200)
 
         # normalize anchor scores
         anchor_max_score = anchor_word_count_scores_top_500[0][1]
@@ -150,11 +153,11 @@ class BackendClass:
         anchor_word_count_dict = dict(anchor_word_count_scores_top_500)
 
         # combine the 500 most common doc_ids from the three indices scores with the page rank and page views
-        text_weight = 1
-        title_weight = 0.2
+        text_weight = 1.5
+        title_weight = 0.6
         anchor_weight = 0.1
-        pr_weight = 0.3
-        pv_weight = 0.2
+        pr_weight = 0.4
+        pv_weight = 0.5
         weighted_scores = [
             (doc_id,
              text_bm25_dict.get(doc_id, 0.0) * text_weight +
