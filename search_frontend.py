@@ -37,6 +37,7 @@ def search():
       return jsonify(res)
     # BEGIN SOLUTION
     res = backend.search(query)
+    # res = backend.search_prm(query)
     # res = backend.test_search(query)
     # END SOLUTION
     return jsonify(res)
@@ -183,4 +184,4 @@ def run(**options):
 
 if __name__ == '__main__':
     # run the Flask RESTful API, make the server publicly available (host='0.0.0.0') on port 8080
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    app.run(host='0.0.0.0', port=8080, debug=False)

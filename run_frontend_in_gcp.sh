@@ -61,6 +61,8 @@ gcloud compute scp $LOCAL_PATH_TO/search_frontend.py $GOOGLE_ACCOUNT_NAME@$INSTA
 gcloud compute scp $LOCAL_PATH_TO/backend.py $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME:/home/$GOOGLE_ACCOUNT_NAME
 gcloud compute scp $LOCAL_PATH_TO/inverted_index_gcp.py $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME:/home/$GOOGLE_ACCOUNT_NAME
 gcloud compute scp $LOCAL_PATH_TO/similarity_functions.py $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME:/home/$GOOGLE_ACCOUNT_NAME
+gcloud compute scp $LOCAL_PATH_TO/parameter_search.py $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME:/home/$GOOGLE_ACCOUNT_NAME
+gcloud compute scp $LOCAL_PATH_TO/queries_train.json $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME:/home/$GOOGLE_ACCOUNT_NAME
 
 # 5. SSH to your VM and start the app
 gcloud compute ssh $GOOGLE_ACCOUNT_NAME@$INSTANCE_NAME
