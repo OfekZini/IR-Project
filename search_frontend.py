@@ -63,7 +63,7 @@ def search_body():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-
+    res = backend.search_body(query)
     # END SOLUTION
     return jsonify(res)
 
@@ -93,7 +93,7 @@ def search_title():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-
+    res = backend.search_title(query)
     # END SOLUTION
     return jsonify(res)
 

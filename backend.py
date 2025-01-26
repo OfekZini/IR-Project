@@ -193,38 +193,49 @@ class BackendClass:
 
     def search_body(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.text_index, bucket_name)
-        bm25_scores_text = BM25_score(candidates, self.text_index, self.corpus_size, self.text_doc_len_dict,
-                                      self.avg_doc_len, k1=1.2, b=0.75)
-        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.text_doc_len_dict)
-        merged_text = merge(bm25_scores_text, cos_sim_text)
-        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
-        res_titles = self._get_doc_titles(top_100_doc_ids)
-        return res_titles
+        bm25_scores_text = cosine_similarity(tokenized_query, self.text_index,bucket_name)
+        text_res_dict = dict(bm25_scores_text)
+        # sort the combined scores, transform to a list of top 100 doc_ids
+        sorted_scores = sorted(text_res_dict, key=lambda x: x[1], reverse=True)
+        res = []
+        for doc_id, _ in sorted_scores:
+            if doc_id % 2 == 0:
+                res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
+            else:
+                res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
+        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        return res
 
 
     def search_title(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.anchor_index, bucket_name)
-        cos_sim_text = cosine_similarity(tokenized_query, candidates, self.text_index, self.title_doc_len_dict)
-        word_count_scores = word_count_score(candidates)
-        merged_text = merge(word_count_scores, cos_sim_text)
-        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
-        res_titles = self._get_doc_titles(top_100_doc_ids)
-        return res_titles
+        word_count_title = word_count_score(tokenized_query, self.title_index, bucket_name)
+        title_res_dict = dict(word_count_title)
+        # sort the combined scores, transform to a list of top 100 doc_ids
+        sorted_scores = sorted(title_res_dict, key=lambda x: x[1], reverse=True)
+        res = []
+        for doc_id, _ in sorted_scores:
+            if doc_id % 2 == 0:
+                res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
+            else:
+                res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
+        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        return res
 
     def search_anchor(self, query):
         tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query, self.title_index, bucket_name)
-        word_count_scores = word_count_score(candidates)
-        tf_count_scores= tf_count_score(candidates)
-        merged_text = merge(word_count_scores, tf_count_scores)
-        sorted_scores = sorted(merged_text.items(), key=lambda x: x[1], reverse=True)
-        top_100_doc_ids = [doc_id for doc_id, score in sorted_scores[:100]]
-        res_titles = self._get_doc_titles(top_100_doc_ids)
-        return res_titles
+        tf_count_anchor = tf_count_score(tokenized_query, self.anchor_index, bucket_name)
+        title_res_dict = dict(tf_count_anchor)
+        # sort the combined scores, transform to a list of top 100 doc_ids
+        sorted_scores = sorted(title_res_dict, key=lambda x: x[1], reverse=True)
+        res = []
+        for doc_id, _ in sorted_scores:
+            if doc_id % 2 == 0:
+                res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
+            else:
+                res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
+        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
+        return res
 
     def get_pagerank(self, query):
         tokenized_query = tokenize(query)
