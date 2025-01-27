@@ -86,15 +86,13 @@ def calc_cosine(query_tfidf, doc_tfidf):
     return dot_product / (math.sqrt(query_magnitude) * math.sqrt(doc_magnitude))
 
 
-def cosine_similarity(tokenized_query, index, bucket_name):
+def cosine_similarity(tokenized_query, index):
     """
     Returns a dictionary of candidates with cosine similarity scores.
 
     Args:
         tokenized_query (list): A list of tokens representing the query.
-        bucket_name (str): The name of the bucket where the index is stored.
         index: The inverted index object.
-        doc_length_dict (dict): A dictionary mapping document IDs to their lengths.
 
     Output:
     - A dictionary where:
@@ -114,9 +112,7 @@ def cosine_similarity(tokenized_query, index, bucket_name):
             candidates_dict[token] = pl
             for doc_id, tf in candidates_dict[token]:
                 doc_tfidf = {}
-                # doc_length = doc_length_dict.get(doc_id, 1)
                 df = index.df.get(token, 0)
-                # tf = tf
                 if df == 0:
                     idf = 0
                 else:
@@ -128,43 +124,12 @@ def cosine_similarity(tokenized_query, index, bucket_name):
 
     return results
 
-    # query_tfidf_scores = query_tfidf(query, index)
-    # N = len(index.df)
-    # # results = {}
-    # results = Counter()
-
-    # for term, posting_list in candidates.items():
-    #     for doc_id, tf in posting_list:
-    #         doc_tfidf = {}
-    #
-    ##         Get document length from title_doc_lengths_dict
-            # doc_length = doc_length_dict.get(doc_id, 1)  # Default to 1 if not found
-            #
-            ## Calculate TF-IDF
-            # df = index.df.get(term, 0)  # Document frequency
-            # tf = tf  # Term frequency
-            # if df == 0:
-            #     idf = 0
-            # else:
-            #     idf = math.log(N / df, 10)  # Inverse document frequency
-            #
-            # tfidf_value = tf * idf  # TF-IDF value
-            # doc_tfidf[term] = tfidf_value
-            #
-            # cosine = calc_cosine(query_tfidf_scores, doc_tfidf)
-            ## results[doc_id] = cosine
-            # results[doc_id] += cosine
-
-    # return results
-
-
-def BM25_score(tokenized_query, bucket_name, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, b=0.75):
+def BM25_score(tokenized_query, index, doc_num, doc_lengths, avg_doc_length, k1=1.2, b=0.75):
     """
     Calculates BM25 scores for documents based on a given query and an inverted index.
 
     Args:
         tokenized_query (list): A list of tokens representing the query.
-        bucket_name (str): The name of the bucket where the index is stored.
         index: The inverted index object.
         doc_num (int): Total number of documents.
         doc_lengths (dict): A dictionary mapping document IDs to their lengths.
@@ -197,14 +162,13 @@ def BM25_score(tokenized_query, bucket_name, index, doc_num, doc_lengths, avg_do
     return bm25_scores
 
 
-def word_count_score(tokenized_query, index, bucket_name):
+def word_count_score(tokenized_query, index):
     """
     Calculates the number of query terms present in each candidate document.
 
     Args:
         tokenized_query (list): A list of tokens representing the query.
         index: The inverted index object.
-        bucket_name (str): The name of the bucket where the index is stored.
 
     Returns:
         dict: A dictionary where keys are document IDs and values are the number of
@@ -224,14 +188,13 @@ def word_count_score(tokenized_query, index, bucket_name):
     return doc_term_counts
 
 
-def tf_count_score(tokenized_query, index, bucket_name):
+def tf_count_score(tokenized_query, index):
     """
     Calculates the total term frequency (tf) for each document in the candidates posting list.
 
     Args:
         tokenized_query (list): A list of tokens representing the query.
         index: The inverted index object.
-        bucket_name (str): The name of the bucket where the index is stored.
 
     Returns:
         dict: A dictionary where keys are document IDs and values are their total tf score.
@@ -249,80 +212,6 @@ def tf_count_score(tokenized_query, index, bucket_name):
                 doc_tf_scores[doc_id] += tf
 
     return doc_tf_scores
-
-
-def get_candidates(tokenized_query, index, bucket_name):
-    """
-    Retrieves a dictionary mapping query tokens to their respective posting lists.
-
-    Args:
-    tokenized_query (list): A list of tokens representing the query.
-    index: The inverted index object.
-    bucket_name (str): The name of the bucket where the index is stored.
-
-    Returns:
-    A dictionary where keys are query tokens and values are their posting lists.
-    """
-    candidates_dict = {}  # Initialize the dictionary to store results
-
-    for token in tokenized_query:
-      pl = index.read_a_posting_list(".",token)
-      if pl == []:
-        continue
-      else:
-        candidates_dict[token] = pl
-    return candidates_dict  # Return the dictionary
-
-
-def merge(scores1, scores2, w1=0.5, w2=0.5):
-    """
-      Merges two dictionaries of scores from the same index type, applying weights to each.
-
-      Args:
-        scores1: A dictionary where keys are document IDs and values are scores.
-        scores2: A dictionary where keys are document IDs and values are scores.
-        w1: Weight for scores1 (default: 0.5).
-        w2: Weight for scores2 (default: 0.5).
-
-      Returns:
-        A dictionary where keys are document IDs and values are weighted sums of
-        corresponding scores from scores1 and scores2.
-      """
-    merged_scores = {}
-    for doc_id in scores1:
-        merged_scores[doc_id] = scores1[doc_id] * w1 + scores2[doc_id] * w2
-    return merged_scores
-
-
-def cross_merge(text_res, title_res, anchor_res, pr, pv, w1=0.65, w2=0.25, w3=0.1):
-    """
-      Merges three dictionaries of scores with different keys.
-
-      Args:
-        text_res: A dictionary where keys are document IDs and values are scores for text similarity functions.
-        title_res: A dictionary where keys are document IDs and values are scores for title similarity functions.
-        anchor_res: A dictionary where keys are document IDs and values are scores for anchor similarity functions.
-        pr: A dictionary where keys are document IDs and values are PageRank scores.
-        pv: A dictionary where keys are document IDs and values are page view counts.
-        w1: Weight for text_res (default: 0.65).
-        w2: Weight for title_res (default: 0.25).
-        w3: Weight for anchor_res (default: 0.1).
-
-      Returns:
-        A dictionary where keys are document IDs and values are weighted sums of
-        corresponding scores from text_res, title_res, and anchor_res.
-        If a key is missing in one of the dictionaries, its score is considered 0.
-      """
-    pr_weight = 1
-    pv_weight = 1
-    return {
-        doc_id: text_res.get(doc_id, 0.0) * w1 +
-                title_res.get(doc_id, 0.0) * w2 +
-                anchor_res.get(doc_id, 0.0) * w3 +
-                pr.get(doc_id, 0.0) * pr_weight +
-                pv.get(doc_id, 0.0) * pv_weight
-        for doc_id in set(text_res) | set(title_res) | set(anchor_res)
-    }
 
 
 
