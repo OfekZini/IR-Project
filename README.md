@@ -1,7 +1,7 @@
 # Information Retrieval Project
 
-hello everyone! 
-as part of our infromation retrievel course, we were asked to write a working search engine for the entire English wikipedia corpus.
+hello everyone! \
+As part of our infromation retrievel course, we were asked to write a working search engine for the entire English wikipedia corpus.
 
 ### Engine Structure
 
@@ -19,6 +19,8 @@ as part of our infromation retrievel course, we were asked to write a working se
 ### How To Use:
 
 - After creating the different indices and updating the backend class paths, run search_frontend and connect to your local host on port 8080 as described in search_fronted.py.\
-navigate to http://localhost:8080/search?query=enter+query+with+pluses
+Navigate to http://localhost:8080/search?query=enter+query+with+pluses
+- Another option is running the engine localy on colab connected to you GCP bucket.\
+To do so, upload all the relevent files to your google colab notebook and run it!
 
 This project was made by Ofek Zini and Shahaf Harari
