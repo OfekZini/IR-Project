@@ -57,7 +57,7 @@ class BackendClass:
         """
         # indices paths
         print("init backend class")
-        index_name = 'index'
+        self.index_name = 'index'
         self.text_idx_path = 'text_stemmed'
         self.title_idx_path = 'title_stemmed'
         self.anchor_idx_path = 'anchor_stemmed'
@@ -70,27 +70,30 @@ class BackendClass:
         # documents length dictionaries paths
         text_doc_len_path = 'text_stemmed/text_doc_lengths.pickle'
         title_doc_len_path = 'title_stemmed/title_doc_lengths.pickle'
-        # anchor_doc_len_path = 'anchor_stemmed/anchor_doc_lengths.pickle'
 
         # indices data members
-        self.text_index = InvertedIndex.read_index(self.text_idx_path, index_name, bucket_name)
-        self.title_index = InvertedIndex.read_index(self.title_idx_path, index_name, bucket_name)
-        self.anchor_index = InvertedIndex.read_index(self.anchor_idx_path, index_name, bucket_name)
+        self.text_index = InvertedIndex.read_index(self.text_idx_path, self.index_name)
+        self.title_index = InvertedIndex.read_index(self.title_idx_path, self.index_name)
+        self.anchor_index = InvertedIndex.read_index(self.anchor_idx_path, self.index_name)
         print("got indexes")
 
         # # indexes for specific query functions
-        # self.og_text_index = InvertedIndex.read_index(self.og_text_idx_path, index_name, bucket_name)
-        # self.og_title_index = InvertedIndex.read_index(self.og_title_idx_path, index_name, bucket_name)
-        # self.og_anchor_index = InvertedIndex.read_index(self.og_anchor_idx_path, index_name, bucket_name)
+        # self.og_text_index = InvertedIndex.read_index(self.og_text_idx_path, index_name)
+        # print("og_text index")
+        # self.og_title_index = InvertedIndex.read_index(self.og_title_idx_path, index_name)
+        # print("og_title index")
+        # self.og_anchor_index = InvertedIndex.read_index(self.og_anchor_idx_path, index_name)
+        # print("og_anchor index")
         # print("got og indexes")
 
         # Document length dict data members
-        text_doc_len_bytes = download_blob_as_bytes(bucket, text_doc_len_path)
-        self.text_doc_len_dict = pickle.loads(text_doc_len_bytes)
-        title_doc_len_bytes = download_blob_as_bytes(bucket, title_doc_len_path)
-        self.title_doc_len_dict = pickle.loads(title_doc_len_bytes)
-        # anchor_doc_len_bytes = download_blob_as_bytes(bucket, anchor_doc_len_path)
-        # self.anchor_doc_len_dict = pickle.loads(anchor_doc_len_bytes)
+        with open(text_doc_len_path, "rb") as file:
+            self.text_doc_len_dict = pickle.load(file)
+
+
+        with open(title_doc_len_path, "rb") as file:
+            self.title_doc_len_dict = pickle.load(file)
+
 
         # corpus size and average doc length data members
         self.corpus_size = 6348910  # from the gcp ipynb notebook
@@ -102,26 +105,42 @@ class BackendClass:
         # doc_id - title dict data member
         doc_id_title_even_path = 'id_title/even_id_title_dict.pkl'
         doc_id_title_odd_path = 'id_title/uneven_id_title_dict.pkl'
-        doc_id_title_even_bytes = download_blob_as_bytes(bucket, doc_id_title_even_path)
-        doc_id_title_odd_bytes = download_blob_as_bytes(bucket, doc_id_title_odd_path)
-        self.doc_id_title_even_dict = pickle.loads(doc_id_title_even_bytes)
-        self.doc_id_title_odd_dict = pickle.loads(doc_id_title_odd_bytes)
+        # doc_id_title_even_bytes = download_blob_as_bytes(bucket, doc_id_title_even_path)
+        # doc_id_title_odd_bytes = download_blob_as_bytes(bucket, doc_id_title_odd_path)
+        with open(doc_id_title_even_path, "rb") as file:
+            self.doc_id_title_even_dict = pickle.load(file)
+
+        with open(doc_id_title_odd_path, "rb") as file:
+            self.doc_id_title_odd_dict = pickle.load(file)
         print("got title dicts")
 
         # PageRank data member
-        pageRank_path = 'pr/part-00000-65f8552b-1b0d-4846-8d4e-74cf90eec0b7-c000.csv.gz' # a pyspark csv
-        pageRank_bytes = download_blob_as_bytes(bucket, pageRank_path)
-        with gzip.GzipFile(fileobj=BytesIO(pageRank_bytes)) as f:
-            page_ranks = pd.read_csv(f, header=None, index_col=0).squeeze("columns").to_dict()
+        # pageRank_path = 'pr/part-00000-65f8552b-1b0d-4846-8d4e-74cf90eec0b7-c000.csv.gz' # a pyspark csv
+        # pageRank_bytes = download_blob_as_bytes(bucket, pageRank_path)
+        # with gzip.GzipFile(fileobj=BytesIO(pageRank_bytes)) as f:
+        #     page_ranks = pd.read_csv(f, header=None, index_col=0).squeeze("columns").to_dict()
+        # ranks_max = max(page_ranks.values())
+        # self.page_rank = {id: rank / ranks_max for id, rank in page_ranks.items()}
+
+
+        pageRank_path = 'pr/part-00000-65f8552b-1b0d-4846-8d4e-74cf90eec0b7-c000.csv.gz'
+        page_ranks = pd.read_csv(pageRank_path, compression='gzip', header=None, index_col=0).squeeze(
+            "columns").to_dict()
+
+        # Normalize the page ranks
         ranks_max = max(page_ranks.values())
         self.page_rank = {id: rank / ranks_max for id, rank in page_ranks.items()}
         print("got Page rank")
 
         # PageView data member
         pageViews_path = 'pv/pageview.pkl' # a pickle to a dictionary
-        pageViews_bytes = download_blob_as_bytes(bucket, pageViews_path)
+        # pageViews_bytes = download_blob_as_bytes(bucket, pageViews_path)
         print("downloaded page view")
-        self.page_views = pickle.loads(pageViews_bytes)
+        # self.page_views = pickle.loads(pageViews_path)
+        with open(pageViews_path, "rb") as file:
+            self.page_views = pickle.load(file)
+        print("got title dicts")
+
         print("downloaded page view")
         self.views_max = max(self.page_views.values())
         print(f"got max:{self.views_max}")
@@ -205,8 +224,9 @@ class BackendClass:
         return res
 
     def search_body(self, query):
+        og_text_index = InvertedIndex.read_index(self.og_text_idx_path, self.index_name)
         tokens = og_tokenize(query)
-        scored = cosine_similarity(tokens, self.og_text_index, bucket_name)
+        scored = cosine_similarity(tokens, og_text_index, bucket_name)
         top_100 = scored.most_common(100)
         res = []
         for doc_id, _ in top_100:
@@ -217,8 +237,9 @@ class BackendClass:
         return res
 
     def search_title(self, query):
+        og_title_index = InvertedIndex.read_index(self.og_title_idx_path, self.index_name)
         tokens = og_tokenize(query)
-        scored = word_count_score(tokens, self.og_title_index, bucket_name)
+        scored = word_count_score(tokens, og_title_index, bucket_name)
         sorted = scored.most_common()
         res = []
         for doc_id, _ in sorted:
@@ -229,8 +250,9 @@ class BackendClass:
         return res
 
     def search_anchor(self, query):
+        og_anchor_index = InvertedIndex.read_index(self.og_anchor_idx_path, self.index_name)
         tokens = og_tokenize(query)
-        scored = word_count_score(tokens, self.og_anchor_index, bucket_name)
+        scored = word_count_score(tokens, og_anchor_index, bucket_name)
         sorted = scored.most_common()
         res = []
         for doc_id, _ in sorted:
@@ -244,14 +266,14 @@ class BackendClass:
         res = []
         for id in page_ids:
             res.append(self.page_rank.get(id, 0.0))
-        return sorted(res, reverse=True)
+        return res
 
 
     def get_pageview(self, page_ids):
         res = []
         for id in page_ids:
             res.append(self.page_views.get(id, 0.0))
-        return sorted(res, reverse=True)
+        return res
 
 
     def _get_doc_titles(self,id_list):
@@ -265,8 +287,8 @@ class BackendClass:
 
     def test_search(self,query):
         tokenized_query = tokenize(query)
-        bm25_scores_text = BM25_score(tokenized_query, bucket_name, self.text_index, self.corpus_size,
-                                      self.text_doc_len_dict, self.text_avg_doc_len, k1=1.25, b=0.5)
+        bm25_scores_text = BM25_score(tokenized_query, bucket_name, self.title_index, self.corpus_size,
+                                      self.title_avg_doc_len, self.title_avg_doc_len, k1=1.25, b=0.5)
 
         scored = bm25_scores_text.most_common(100)
         res = [(str(id),"res") for id , score in scored]

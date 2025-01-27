@@ -37,8 +37,6 @@ def search():
       return jsonify(res)
     # BEGIN SOLUTION
     res = backend.search(query)
-    # res = backend.search_prm(query)
-    # res = backend.test_search(query)
     # END SOLUTION
     return jsonify(res)
 
