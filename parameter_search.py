@@ -84,7 +84,6 @@ with open(results_file, 'a', newline='') as csvfile:
     if not file_exists:
         header = list(param_grid[0].keys()) + ['query', 'duration', 'quality']
         csvwriter.writerow(header)
-# results = {}
     for params in param_grid:
 
         text_k1 = params['text_k1']
@@ -113,19 +112,8 @@ with open(results_file, 'a', newline='') as csvfile:
             duration = time() - t_start
             pred_wids, _ = zip(*res)
             rq = results_quality(true_wids, pred_wids)
-
-            # qs_res.append((q, duration, rq))
-            # Write row for each query
             csvwriter.writerow([
                 text_k1, text_b, text_w, title_w, anchor_w, pr_w, pv_w,
                 q, duration, rq
             ])
-
-#     results[str(params)] = (
-#         sum(result for _, _, result in qs_res) / len(qs_res),
-#         sum(dur for _, dur, _ in qs_res) / len(qs_res),
-#         max(dur for _, dur, _ in qs_res)
-#     )
-#
-# print(results)
 
