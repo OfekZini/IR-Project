@@ -1,1 +1,13 @@
+# Ignore specific directories
+__pycache__/
+anaconda_projects/
+Colab Tests/
+MISC/
+.idea/
+.ipynb_checkpoints/
 
+# Ignore specific file types
+*.csv
+*.DS_Store
+
+GCP engine tests.ipynb
