@@ -16,6 +16,8 @@ corpus_stopwords = ['category', 'references', 'also”', 'links', 'extrenal',
                  'make', 'made', 'part', 'would', 'people', 'second', 'also',
                  'following', 'history', 'thumb', 'external']
 
+
+
 all_stopwords = english_stopwords.union(corpus_stopwords)
 RE_WORD = re.compile(r"""[\#\@\w](['\-]?\w){2,24}""", re.UNICODE)
 
@@ -26,6 +28,18 @@ def tokenize(text):
     stemmed = [stemmer.stem(token) for token in tokens if token not in all_stopwords]
     return stemmed
 
+
+def og_tokenize(query):
+    english_sw = frozenset(stopwords.words('english'))
+    corpus_sw = ["category", "references", "also", "external", "links",
+                        "may", "first", "see", "history", "people", "one", "two",
+                        "part", "thumb", "including", "second", "following",
+                        "many", "however", "would", "became"]
+
+    all_sw = english_sw.union(corpus_sw)
+    RE_W = re.compile(r"""[\#\@\w](['\-]?\w){2,24}""", re.UNICODE)
+    tokens = [token.group() for token in RE_W.finditer(query.lower())]
+    return [token for token in tokens if token not in all_sw]
 
 def query_tfidf(query, index):
     """
@@ -309,3 +323,6 @@ def cross_merge(text_res, title_res, anchor_res, pr, pv, w1=0.65, w2=0.25, w3=0.
                 pv.get(doc_id, 0.0) * pv_weight
         for doc_id in set(text_res) | set(title_res) | set(anchor_res)
     }
+
+
+

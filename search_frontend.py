@@ -123,7 +123,7 @@ def search_anchor():
     if len(query) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-    
+    res = backend.search_anchor(query)
     # END SOLUTION
     return jsonify(res)
 
@@ -148,7 +148,7 @@ def get_pagerank():
     if len(wiki_ids) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-
+    res = backend.get_pagerank(wiki_ids)
     # END SOLUTION
     return jsonify(res)
 
@@ -175,7 +175,7 @@ def get_pageview():
     if len(wiki_ids) == 0:
       return jsonify(res)
     # BEGIN SOLUTION
-
+    res = backend.get_pageview(wiki_ids)
     # END SOLUTION
     return jsonify(res)
 

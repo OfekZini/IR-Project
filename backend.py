@@ -1,3 +1,4 @@
+import time
 from collections import Counter
 import gzip
 import re
@@ -61,6 +62,11 @@ class BackendClass:
         self.title_idx_path = 'title_stemmed'
         self.anchor_idx_path = 'anchor_stemmed'
 
+        # indexes paths for specific query functions
+        self.og_anchor_idx_path = 'og_anchor_idx'
+        self.og_text_idx_path = 'og_text_idx'
+        self.og_title_idx_path = 'og_title_idx'
+
         # documents length dictionaries paths
         text_doc_len_path = 'text_stemmed/text_doc_lengths.pickle'
         title_doc_len_path = 'title_stemmed/title_doc_lengths.pickle'
@@ -71,6 +77,12 @@ class BackendClass:
         self.title_index = InvertedIndex.read_index(self.title_idx_path, index_name, bucket_name)
         self.anchor_index = InvertedIndex.read_index(self.anchor_idx_path, index_name, bucket_name)
         print("got indexes")
+
+        # # indexes for specific query functions
+        # self.og_text_index = InvertedIndex.read_index(self.og_text_idx_path, index_name, bucket_name)
+        # self.og_title_index = InvertedIndex.read_index(self.og_title_idx_path, index_name, bucket_name)
+        # self.og_anchor_index = InvertedIndex.read_index(self.og_anchor_idx_path, index_name, bucket_name)
+        # print("got og indexes")
 
         # Document length dict data members
         text_doc_len_bytes = download_blob_as_bytes(bucket, text_doc_len_path)
@@ -94,6 +106,7 @@ class BackendClass:
         doc_id_title_odd_bytes = download_blob_as_bytes(bucket, doc_id_title_odd_path)
         self.doc_id_title_even_dict = pickle.loads(doc_id_title_even_bytes)
         self.doc_id_title_odd_dict = pickle.loads(doc_id_title_odd_bytes)
+        print("got title dicts")
 
         # PageRank data member
         pageRank_path = 'pr/part-00000-65f8552b-1b0d-4846-8d4e-74cf90eec0b7-c000.csv.gz' # a pyspark csv
@@ -192,58 +205,53 @@ class BackendClass:
         return res
 
     def search_body(self, query):
-        tokenized_query = tokenize(query)
-        bm25_scores_text = cosine_similarity(tokenized_query, self.text_index,bucket_name)
-        text_res_dict = dict(bm25_scores_text)
-        # sort the combined scores, transform to a list of top 100 doc_ids
-        sorted_scores = sorted(text_res_dict, key=lambda x: x[1], reverse=True)
+        tokens = og_tokenize(query)
+        scored = cosine_similarity(tokens, self.og_text_index, bucket_name)
+        top_100 = scored.most_common(100)
         res = []
-        for doc_id, _ in sorted_scores:
+        for doc_id, _ in top_100:
             if doc_id % 2 == 0:
                 res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
             else:
                 res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
-        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
         return res
 
-
     def search_title(self, query):
-        tokenized_query = tokenize(query)
-        word_count_title = word_count_score(tokenized_query, self.title_index, bucket_name)
-        title_res_dict = dict(word_count_title)
-        # sort the combined scores, transform to a list of top 100 doc_ids
-        sorted_scores = sorted(title_res_dict, key=lambda x: x[1], reverse=True)
+        tokens = og_tokenize(query)
+        scored = word_count_score(tokens, self.og_title_index, bucket_name)
+        sorted = scored.most_common()
         res = []
-        for doc_id, _ in sorted_scores:
+        for doc_id, _ in sorted:
             if doc_id % 2 == 0:
                 res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
             else:
                 res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
-        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
         return res
 
     def search_anchor(self, query):
-        tokenized_query = tokenize(query)
-        tf_count_anchor = tf_count_score(tokenized_query, self.anchor_index, bucket_name)
-        title_res_dict = dict(tf_count_anchor)
-        # sort the combined scores, transform to a list of top 100 doc_ids
-        sorted_scores = sorted(title_res_dict, key=lambda x: x[1], reverse=True)
+        tokens = og_tokenize(query)
+        scored = word_count_score(tokens, self.og_anchor_index, bucket_name)
+        sorted = scored.most_common()
         res = []
-        for doc_id, _ in sorted_scores:
+        for doc_id, _ in sorted:
             if doc_id % 2 == 0:
                 res.append((str(doc_id), self.doc_id_title_even_dict.get(doc_id)))
             else:
                 res.append((str(doc_id), self.doc_id_title_odd_dict.get(doc_id)))
-        # return [(str(doc_id),"res") for doc_id, score in sorted_scores[:100]]
         return res
 
-    def get_pagerank(self, query):
-        tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query,self.title_index, bucket_name)
+    def get_pagerank(self, page_ids):
+        res = []
+        for id in page_ids:
+            res.append(self.page_rank.get(id, 0.0))
+        return sorted(res, reverse=True)
 
-    def get_pageview(self, query):
-        tokenized_query = tokenize(query)
-        candidates = get_candidates(tokenized_query,self.title_index, bucket_name)
+
+    def get_pageview(self, page_ids):
+        res = []
+        for id in page_ids:
+            res.append(self.page_views.get(id, 0.0))
+        return sorted(res, reverse=True)
 
 
     def _get_doc_titles(self,id_list):
